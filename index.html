@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>注音填空遊戲</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: 'Noto Sans TC', sans-serif;
+        }
+        body {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+            overflow: hidden;
+        }
+        .game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .bg-img {
+            width: 100%;
+            height: 100%;
+            background-image: url('注音小學堂 注音填空頁面.png');
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-position: center center;
+            filter: brightness(0.92);
+            z-index: 0;
+            position: absolute;
+            left: 0; top: 0;
+        }
+        .game-area {
+            position: relative;
+            z-index: 1;
+            /* 移除白色背景與陰影 */
+            background: none;
+            border-radius: 24px;
+            box-shadow: none;
+            padding: 36px 32px 28px 32px;
+            max-width: 1100px;
+            width: 95vw;
+            max-height: 80vh;
+            min-height: 320px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow-y: auto;
+        }
+        .game-title {
+            font-size: 2em;
+            color: #1976d2;
+            margin-bottom: 24px;
+            font-weight: bold;
+            text-shadow: 1px 1px 6px #fff;
+        }
+        #questions {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: stretch;
+            gap: 24px;
+            margin-bottom: 18px;
+            width: 100%;
+        }
+        .question-container {
+            background: #e3f2fd;
+            border: 3px solid #90caf9;
+            border-radius: 20px;
+            box-shadow: 0 2px 12px rgba(33,150,243,0.10);
+            padding: 24px 16px 18px 16px;
+            flex: 1 1 0;
+            min-width: 0;
+            max-width: 200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: transform 0.18s, box-shadow 0.18s;
+            opacity: 0;
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        .question-container:nth-child(1) { animation-delay: 0.1s; }
+        .question-container:nth-child(2) { animation-delay: 0.2s; }
+        .question-container:nth-child(3) { animation-delay: 0.3s; }
+        .question-container:nth-child(4) { animation-delay: 0.4s; }
+        .question-container:nth-child(5) { animation-delay: 0.5s; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .question-container:hover {
+            transform: translateY(-6px) scale(1.04) rotate(-2deg);
+            box-shadow: 0 8px 24px rgba(33,150,243,0.18);
+        }
+        .question-container .q-title {
+            font-size: 1.2em;
+            color: #0d47a1;
+            font-weight: bold;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+            text-shadow: 1px 1px 2px rgba(255,255,255,0.8);
+        }
+        .question-container .q-zhuyin {
+            font-size: 1.445em; /* 原本1.7em的85% */
+            color: #d84315;
+            margin-bottom: 14px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            text-shadow: 1px 1px 2px rgba(255,255,255,0.8);
+            white-space: nowrap;
+        }
+        .input-area {
+            margin: 8px 0 0 0;
+        }
+        input[type="text"] {
+            padding: 10px 14px;
+            font-size: 1.2em;
+            border: 2px solid #4CAF50;
+            border-radius: 8px;
+            margin: 0 2px;
+            outline: none;
+            transition: border 0.18s, box-shadow 0.18s;
+            width: 110px;
+            height: 40px;
+        }
+        input[type="text"]:focus {
+            border: 2px solid #1976d2;
+            box-shadow: 0 0 6px #90caf9;
+        }
+        input.correct {
+            border-color: #4CAF50;
+            animation: pulse 0.5s;
+        }
+        input.incorrect {
+            border-color: #d84315;
+            animation: shake 0.5s;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+        }
+        #submitBtn, #playAgainBtn {
+            padding: 14px 38px;
+            font-size: 1.2em;
+            background: #c8ebff;
+            color: #1976d2;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 18px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            box-shadow: 0 2px 8px rgba(33,150,243,0.10);
+            transition: background 0.2s, transform 0.15s;
+            animation: fadeIn 0.5s ease-out;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        #submitBtn:hover, #playAgainBtn:hover {
+            background: #b2e3fa;
+            transform: scale(1.06);
+        }
+        #result-area {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start; /* 往上靠齊 */
+            min-height: 320px;
+            margin-top: -80px; /* 再往上移動一點 */
+            position: relative;
+        }
+        #result {
+            margin-top: 0; /* 移除原本的24px，讓內容更靠上 */
+            font-size: 1.08em; /* 比例縮小一點 */
+            color: #333;
+            background: none;
+            border-radius: 10px;
+            padding: 12px 6px; /* 縮小 padding */
+            box-shadow: none;
+            max-width: 420px;  /* 縮小最大寬度 */
+            width: 80vw;       /* 縮小寬度比例 */
+            margin-left: auto;
+            margin-right: auto;
+            opacity: 1;
+            transition: opacity 0.5s ease-in;
+            text-align: center;
+            overflow: visible; /* 防止出現捲軸 */
+        }
+        #playAgainBtn {
+            position: static; /* 取消固定，讓它跟著結果區塊流動 */
+            margin: 24px auto 0 auto; /* 距離結果區塊下方一點 */
+            display: block;
+            right: auto;
+            bottom: auto;
+            z-index: 1;
+            padding: 14px 38px;
+            font-size: 1.2em;
+            background: #c8ebff;
+            color: #1976d2;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            letter-spacing: 2px;
+            box-shadow: 0 2px 8px rgba(33,150,243,0.10);
+            transition: background 0.2s, transform 0.15s;
+            animation: fadeIn 0.5s ease-out;
+        }
+        #playAgainBtn:hover {
+            background: #b2e3fa;
+            transform: scale(1.06);
+        }
+        @media (max-width: 1100px) {
+            .game-area { max-width: 99vw; padding: 18px 2vw; }
+            #questions { gap: 10px; }
+            .question-container { max-width: 120px; padding: 10px 2px; }
+        }
+        @media (max-width: 700px) {
+            .game-area { padding: 6px 0; }
+            #questions { flex-direction: column; gap: 16px; }
+            .question-container { min-width: 90vw; max-width: 98vw; }
+            input[type="text"] { width: 80%; }
+            .question-container .q-zhuyin { font-size: 1.2em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="bg-img"></div>
+        <div class="game-area">
+            <h1 class="game-title"></h1>
+            <div id="answer-area" style="width:100%;flex-direction:column;align-items:center;">
+                <div id="questions"></div>
+                <button id="submitBtn">提交答案</button>
+            </div>
+            <div id="result-area" style="width:100%;display:none;flex-direction:column;align-items:center;justify-content:center;">
+                <div id="result"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const questionBank = [
+            { zhuyin: 'ㄆㄧㄥˊ ㄍㄨㄛˇ', answer: '蘋果' },
+            { zhuyin: 'ㄒㄧㄤ ㄐㄧㄠ', answer: '香蕉' },
+            { zhuyin: 'ㄕㄨㄟˇ ㄍㄨㄛˇ', answer: '水果' },
+            { zhuyin: 'ㄆㄨˊ ㄊㄠˊ', answer: '葡萄' },
+            { zhuyin: 'ㄒㄧ ㄍㄨㄚ', answer: '西瓜' },
+            { zhuyin: 'ㄧㄥ ㄊㄠˊ', answer: '櫻桃' },
+            { zhuyin: 'ㄋㄧㄥˊ ㄇㄥˊ', answer: '檸檬' },
+            { zhuyin: 'ㄌㄧˋ ㄓ', answer: '荔枝' },
+            { zhuyin: 'ㄇㄤˊ ㄍㄨㄛˇ', answer: '芒果' },
+            { zhuyin: 'ㄒㄧㄤ ㄍㄨ', answer: '香菇' },
+            { zhuyin: 'ㄅㄧˇ', answer: '筆' },
+            { zhuyin: 'ㄕㄨ', answer: '書' },
+            { zhuyin: 'ㄉㄧㄢˋ ㄋㄠˇ', answer: '電腦' },
+            { zhuyin: 'ㄕㄡˇ ㄐㄧ', answer: '手機' },
+            { zhuyin: 'ㄅㄠˋ ㄓˇ', answer: '報紙' },
+            { zhuyin: 'ㄔㄚ ㄗ˙', answer: '叉子' },
+            { zhuyin: 'ㄉㄠ ㄗ˙', answer: '刀子' },
+            { zhuyin: 'ㄎㄨㄞˋ ㄗ˙', answer: '筷子' },
+            { zhuyin: 'ㄨㄢˇ', answer: '碗' },
+            { zhuyin: 'ㄅㄟ ㄗ˙', answer: '杯子' },
+            { zhuyin: 'ㄇㄧㄢˋ ㄅㄠ', answer: '麵包' },
+            { zhuyin: 'ㄋㄞˇ ㄋㄞˇ', answer: '奶奶' },
+            { zhuyin: 'ㄅㄚˋ ㄅㄚ˙', answer: '爸爸' },
+            { zhuyin: 'ㄇㄚ ㄇㄚ', answer: '媽媽' },
+            { zhuyin: 'ㄒㄧˇ ㄧ ㄐㄧ', answer: '洗衣機' },
+            { zhuyin: 'ㄉㄧㄢˋ ㄕˋ', answer: '電視' },
+            { zhuyin: 'ㄅㄠˇ ㄨㄣ ㄅㄟ', answer: '保溫杯' },
+            { zhuyin: 'ㄒㄧㄤˋ ㄐㄧ', answer: '相機' },
+
+        ];
+
+        let currentQuestions = [];
+
+        function showPage(page) {
+            document.getElementById('answer-area').style.display = page === 'answer' ? 'flex' : 'none';
+            document.getElementById('result-area').style.display = page === 'result' ? 'flex' : 'none';
+        }
+
+        function initGame() {
+            currentQuestions = shuffleArray(questionBank).slice(0, 5);
+            const questionsDiv = document.getElementById('questions');
+            questionsDiv.innerHTML = '';
+            currentQuestions.forEach((q, index) => {
+                const questionHTML = `
+                    <div class="question-container">
+                        <div class="q-title">第 ${index + 1} 題</div>
+                        <div class="q-zhuyin">${q.zhuyin}</div>
+                        <div class="input-area">
+                            <input type="text" id="answer${index}" placeholder="請輸入答案" aria-label="輸入第 ${index + 1} 題的答案">
+                        </div>
+                    </div>
+                `;
+                questionsDiv.innerHTML += questionHTML;
+            });
+            showPage('answer');
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function checkAnswers() {
+            let correct = 0;
+            let wrong = [];
+            currentQuestions.forEach((q, index) => {
+                const input = document.getElementById(`answer${index}`);
+                const userAnswer = input.value.trim();
+                input.classList.remove('correct', 'incorrect');
+                if (userAnswer === q.answer) {
+                    correct++;
+                    input.classList.add('correct');
+                } else {
+                    input.classList.add('incorrect');
+                    wrong.push({
+                        question: q.zhuyin,
+                        userAnswer: userAnswer || '（未作答）',
+                        correctAnswer: q.answer
+                    });
+                }
+            });
+
+            let encouragement = '';
+            if (correct === 5) {
+                encouragement = '🎉 太棒了！你全部答對了！繼續挑戰更高難度吧！';
+                if (window.confetti) confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+            } else if (correct >= 3) {
+                encouragement = '👍 表現不錯！再接再厲，你一定可以全部答對！';
+            } else if (correct >= 1) {
+                encouragement = '💪 加油！多練習幾次就會更進步！';
+            } else {
+                encouragement = '🌱 學習是一個過程，別灰心！下次一定更好！';
+            }
+
+            // 結果區塊
+            let resultHTML = `
+                <h3 style="margin-bottom:10px;">${encouragement}</h3>
+                <p>共答對 <b style="color:#388e3c">${correct}</b> 題，答錯 <b style="color:#d84315">${5 - correct}</b> 題</p>
+            `;
+
+            if (wrong.length > 0) {
+                // 每行最多三個
+                resultHTML += `<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:18px;margin-top:10px;">`;
+                wrong.forEach((w, idx) => {
+                    if (idx > 0 && idx % 3 === 0) {
+                        resultHTML += `</div><div style="display:flex;flex-wrap:wrap;justify-content:center;gap:18px;margin-top:10px;">`;
+                    }
+                    resultHTML += `
+                        <div style="border:2px solid #90caf9;border-radius:16px;padding:12px 10px;min-width:150px;max-width:200px;background:none;box-shadow:none;display:flex;flex-direction:column;align-items:center;">
+                            <div style="color:#1976d2;font-weight:bold;margin-bottom:4px;">${w.question}</div>
+                            <div>
+                                <span style="color:#d84315;">你的答案：${w.userAnswer}</span><br>
+                                <span style="color:#388e3c;">正確答案：${w.correctAnswer}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+                resultHTML += `</div>`;
+            }
+
+            document.getElementById('result').innerHTML = resultHTML;
+            showPage('result');
+
+            // 顯示再玩一次按鈕在結果區塊下方
+            const resultArea = document.getElementById('result-area');
+            // 先移除舊的按鈕
+            let oldBtn = document.getElementById('playAgainBtn');
+            if (oldBtn) oldBtn.remove();
+            if (correct < 5) {
+                const playAgainBtn = document.createElement('button');
+                playAgainBtn.id = 'playAgainBtn';
+                playAgainBtn.textContent = '再玩一次';
+                playAgainBtn.onclick = function() {
+                    playAgainBtn.style.display = 'none';
+                    initGame();
+                };
+                resultArea.appendChild(playAgainBtn);
+            } else {
+                setTimeout(() => {
+                    initGame();
+                }, 2000);
+            }
+        }
+
+        window.onload = function() {
+            // 建立分頁結構
+            const gameArea = document.querySelector('.game-area');
+            gameArea.innerHTML = `
+                <h1 class="game-title"></h1>
+                <div id="answer-area" style="width:100%;flex-direction:column;align-items:center;">
+                    <div id="questions"></div>
+                    <button id="submitBtn">提交答案</button>
+                </div>
+                <div id="result-area" style="width:100%;display:none;flex-direction:column;align-items:center;justify-content:center;">
+                    <div id="result"></div>
+                </div>
+            `;
+            document.getElementById('submitBtn').addEventListener('click', checkAnswers);
+            initGame();
+        };
+    </script>
+</body>
+</html>
